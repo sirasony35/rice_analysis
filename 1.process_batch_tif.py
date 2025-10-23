@@ -4,9 +4,9 @@ import sys
 import glob
 
 # --- 1. 사용자 설정 부분 ---
-QGIS_INSTALL_PATH = 'C:/Program Files/QGIS 3.40.10'  # 예시 경로
-INPUT_FOLDER = 'data'
-OUTPUT_FOLDER = 'result'
+QGIS_INSTALL_PATH = 'C:/Program Files/QGIS 3.40.11'  # 예시 경로
+INPUT_FOLDER = 'data/생육데이터/김제'
+OUTPUT_FOLDER = 'data/생육데이터/김제_result'
 OUTPUT_WIDTH_PX = 1200
 # -------------------------
 
@@ -63,40 +63,40 @@ OUTPUT_WIDTH_PX = 1200
 ## 각 등급별 이상 ~ 미만
 CLASSIFICATION_MAP = {
     'OSAVI': [
-        (0.30, '#c51f1e', '< 0.30'),
-        (0.40, '#f5a361', '0.31 - 0.40'),
-        (0.50, '#faf7be', '0.41 - 0.50'),
-        (0.60, '#a1d193', '0.51 - 0.60'),
-        ('max', '#447cb9', '>= 0.60')
+        (0.25, '#c51f1e', '< 0.25'),
+        (0.45, '#f5a361', '0.26 - 0.45'),
+        (0.60, '#faf7be', '0.46 - 0.60'),
+        (0.75, '#a1d193', '0.61 - 0.75'),
+        ('max', '#447cb9', '>= 0.75')
     ],
     # ★★★ GNDVI를 NDVI보다 위로 이동 ★★★
     'GNDVI': [
-        (0.40, '#c51f1e', '< 0.40'),
-        (0.50, '#f5a361', '0.41 - 0.50'),
-        (0.60, '#faf7be', '0.51 - 0.60'),
-        (0.70, '#a1d193', '0.61 - 0.70'),
-        ('max', '#447cb9', '>= 0.70')
+        (0.30, '#c51f1e', '< 0.30'),
+        (0.50, '#f5a361', '0.31 - 0.50'),
+        (0.65, '#faf7be', '0.51 - 0.65'),
+        (0.80, '#a1d193', '0.66 - 0.80'),
+        ('max', '#447cb9', '>= 0.81')
     ],
     'NDVI': [
-        (0.50, '#c51f1e', '< 0.50'),
-        (0.60, '#f5a361', '0.51 - 0.60'),
-        (0.70, '#faf7be', '0.61 - 0.70'),
-        (0.80, '#a1d193', '0.71 - 0.80'),
-        ('max', '#447cb9', '>= 0.80')
+        (0.25, '#c51f1e', '< 0.25'),
+        (0.45, '#f5a361', '0.26 - 0.45'),
+        (0.60, '#faf7be', '0.46 - 0.60'),
+        (0.75, '#a1d193', '0.61 - 0.75'),
+        ('max', '#447cb9', '>= 0.76')
     ],
     'LCI': [
         (0.25, '#c51f1e', '< 0.25'),
-        (0.35, '#f5a361', '0.26 - 0.35'),
-        (0.45, '#faf7be', '0.36 - 0.45'),
-        (0.55, '#a1d193', '0.46 - 0.55'),
-        ('max', '#447cb9', '>= 0.55')
+        (0.45, '#f5a361', '0.26 - 0.45'),
+        (0.65, '#faf7be', '0.46 - 0.65'),
+        (0.90, '#a1d193', '0.66 - 0.90'),
+        ('max', '#447cb9', '>= 0.91')
     ],
     'NDRE': [
-        (0.30, '#c51f1e', '< 0.30'),
-        (0.40, '#f5a361', '0.31 - 0.40'),
-        (0.50, '#faf7be', '0.41 - 0.50'),
-        (0.60, '#a1d193', '0.51 - 0.60'),
-        ('max', '#447cb9', '>= 0.60')
+        (0.20, '#c51f1e', '< 0.20'),
+        (0.35, '#f5a361', '0.21 - 0.35'),
+        (0.50, '#faf7be', '0.36 - 0.50'),
+        (0.65, '#a1d193', '0.51 - 0.65'),
+        ('max', '#447cb9', '>= 0.66')
     ]
 }
 
@@ -225,6 +225,7 @@ def process_raster(input_path, output_path, rules):
 
 
 # === ★★★ 수정된 main 함수 ★★★ ===
+# === ★★★ 수정된 main 함수 ★★★ ===
 def main():
     """메인 실행 함수"""
     setup_qgis_environment()
@@ -246,18 +247,23 @@ def main():
 
     print(f"\n총 {len(raster_files)}개의 파일을 확인합니다...")
 
+    # 처리 대상 식생 지수 이름 목록 생성
+    valid_index_names = list(CLASSIFICATION_MAP.keys())
+
     for file_path in raster_files:
         filename_base = os.path.basename(file_path)
+        filename_upper = filename_base.upper() # 대소문자 구분 없이 비교하기 위해
 
-        # --- 파일 이름에 'RGB'가 포함되어 있는지 확인 ---
-        # 파일 이름을 대문자로 바꿔서 비교하여 대소문자 구분 없이 처리합니다.
-        if 'RGB' in filename_base.upper():
-            print(f"-> '{filename_base}' 파일 이름에 'RGB'가 포함되어 건너<binary data, 2 bytes><binary data, 2 bytes><binary data, 2 bytes>니다.")
+        # --- 파일 이름에 유효한 식생 지수 이름이 포함되어 있는지 확인 ---
+        # any() 함수를 사용하여 목록의 이름 중 하나라도 포함되면 True
+        is_valid_file = any(index_name in filename_upper for index_name in valid_index_names)
+
+        if not is_valid_file:
+            print(f"-> '{filename_base}' 파일 이름에 유효한 식생 지수가 없어 건너<binary data, 2 bytes><binary data, 2 bytes><binary data, 2 bytes>니다.")
             continue # 다음 파일로 넘어감
         # --- 확인 로직 끝 ---
 
-        # 'RGB'가 없는 파일만 아래 로직을 실행합니다.
-        filename_upper = filename_base.upper()
+        # 유효한 식생 지수 파일만 아래 로직을 실행합니다.
         found_rule = False
         for index_name, rules in CLASSIFICATION_MAP.items():
             if index_name in filename_upper:
@@ -265,13 +271,15 @@ def main():
                 output_path = os.path.join(OUTPUT_FOLDER, f"{base_name_no_ext}.png")
                 process_raster(file_path, output_path, rules)
                 found_rule = True
-                break
+                break # 이미 맞는 규칙을 찾았으므로 더 이상 찾지 않음
 
+        # 이 부분은 이론상 실행되지 않아야 하지만, 안전장치로 남겨둡니다.
         if not found_rule:
-            print(f"-> '{filename_base}' 파일에 해당하는 규칙을 찾을 수 없거나 RGB 파일이어서 건너<binary data, 2 bytes><binary data, 2 bytes><binary data, 2 bytes>니다.")
+            print(f"-> '{filename_base}' 파일 처리 중 예외 발생 (규칙 재탐색 실패). 건너<binary data, 2 bytes><binary data, 2 bytes><binary data, 2 bytes>니다.")
 
     qgs.exitQgis()
     print("\n모든 작업이 완료되었습니다.")
+
 
 if __name__ == '__main__':
     main()
