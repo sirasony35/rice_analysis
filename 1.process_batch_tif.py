@@ -5,8 +5,8 @@ import glob
 
 # --- 1. 사용자 설정 부분 ---
 QGIS_INSTALL_PATH = 'C:/Program Files/QGIS 3.40.11'  # 예시 경로
-INPUT_FOLDER = '../Drone/25년 생육데이터/벼/1.김제'
-OUTPUT_FOLDER = '김제_vi'
+INPUT_FOLDER = 'data/생육데이터/김제'
+OUTPUT_FOLDER = 'data/생육데이터/김제_vi'
 OUTPUT_WIDTH_PX = 1200
 # -------------------------
 

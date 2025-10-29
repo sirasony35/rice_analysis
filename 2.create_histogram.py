@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 
 # --- 1. 사용자 설정 부분 ---
-INPUT_FOLDER = '../Drone/25년 생육데이터/벼/1.김제'  # 입력 폴더 경로
-OUTPUT_FOLDER = '김제_histogram'  # 출력 폴더 경로
+INPUT_FOLDER = 'data/생육데이터/김제'  # 입력 폴더 경로
+OUTPUT_FOLDER = 'data/생육데이터/김제_histogram'  # 출력 폴더 경로
 # -------------------------
 
 # --- 처리 대상 식생 지수 목록 ---
