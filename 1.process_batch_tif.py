@@ -224,7 +224,56 @@ def process_raster(input_path, output_path, rules):
     project.removeMapLayer(raster_layer.id())
 
 
-# === ★★★ 수정된 main 함수 ★★★ ===
+# === ★★★ 수정된 RGB 변환 함수 ★★★ ===
+def convert_rgb_to_png(input_path, output_path):
+    """RGB GeoTIFF 파일을 PNG로 변환하여 저장하는 함수 (스타일링 없음)"""
+    # 필요한 클래스 import 추가
+    from qgis.core import (QgsProject, QgsRasterLayer, QgsMapSettings,
+                           QgsMapRendererParallelJob, QgsMultiBandColorRenderer)
+    from PyQt5.QtCore import QSize, QEventLoop
+    from PyQt5.QtGui import QColor
+
+    print(f"-> 처리 시작 (RGB 변환): {os.path.basename(input_path)}")
+    project = QgsProject.instance()
+    raster_layer = QgsRasterLayer(input_path, os.path.basename(input_path))
+    if not raster_layer.isValid():
+        print(f"   [오류] RGB 레이어를 불러올 수 없습니다. 건너<binary data, 2 bytes>니다.")
+        return
+
+    if raster_layer.bandCount() < 3:
+        print(f"   [경고] '{os.path.basename(input_path)}'은 RGB 파일이 아닌 것 같습니다(밴드 수 < 3). 건너<binary data, 2 bytes>니다.")
+        return
+
+    project.setCrs(raster_layer.crs())
+    project.addMapLayer(raster_layer)
+
+    # === ★★★ 수정된 부분: 기본 RGB 렌더러 설정 ★★★ ===
+    # QgsMultiBandColorRenderer를 사용하여 1, 2, 3번 밴드를 R, G, B에 할당
+    renderer = QgsMultiBandColorRenderer(raster_layer.dataProvider(), 1, 2, 3)
+    raster_layer.setRenderer(renderer)
+    # raster_layer.setDefaultStyle() # <- 이 줄 삭제
+
+    # 이미지 렌더링 (이하 코드는 동일)
+    extent = raster_layer.extent()
+    width = raster_layer.width()
+    height = raster_layer.height()
+
+    settings = QgsMapSettings()
+    settings.setLayers([raster_layer])
+    settings.setExtent(extent)
+    settings.setOutputSize(QSize(width, height))
+
+    job = QgsMapRendererParallelJob(settings)
+    loop = QEventLoop()
+    job.finished.connect(loop.quit)
+    job.start()
+    loop.exec_()
+
+    image = job.renderedImage()
+    image.save(output_path, "png")
+    print(f"   [성공] PNG 파일 저장 완료: {os.path.basename(output_path)}")
+    project.removeMapLayer(raster_layer.id())
+
 # === ★★★ 수정된 main 함수 ★★★ ===
 def main():
     """메인 실행 함수"""
@@ -247,39 +296,36 @@ def main():
 
     print(f"\n총 {len(raster_files)}개의 파일을 확인합니다...")
 
-    # 처리 대상 식생 지수 이름 목록 생성
     valid_index_names = list(CLASSIFICATION_MAP.keys())
 
     for file_path in raster_files:
         filename_base = os.path.basename(file_path)
-        filename_upper = filename_base.upper() # 대소문자 구분 없이 비교하기 위해
+        filename_upper = filename_base.upper()
+        base_name_no_ext = os.path.splitext(filename_base)[0]
+        output_path = os.path.join(OUTPUT_FOLDER, f"{base_name_no_ext}.png")
 
-        # --- 파일 이름에 유효한 식생 지수 이름이 포함되어 있는지 확인 ---
-        # any() 함수를 사용하여 목록의 이름 중 하나라도 포함되면 True
-        is_valid_file = any(index_name in filename_upper for index_name in valid_index_names)
+        # --- 파일 처리 로직 변경 ---
+        # 1. 파일 이름에 'RGB'가 포함되어 있는지 먼저 확인
+        if 'RGB' in filename_upper:
+            convert_rgb_to_png(file_path, output_path)
+            continue  # 다음 파일로 넘어감
 
-        if not is_valid_file:
-            print(f"-> '{filename_base}' 파일 이름에 유효한 식생 지수가 없어 건너<binary data, 2 bytes><binary data, 2 bytes><binary data, 2 bytes>니다.")
-            continue # 다음 파일로 넘어감
-        # --- 확인 로직 끝 ---
-
-        # 유효한 식생 지수 파일만 아래 로직을 실행합니다.
+        # 2. 'RGB'가 없다면, 유효한 식생 지수 이름이 있는지 확인
         found_rule = False
         for index_name, rules in CLASSIFICATION_MAP.items():
             if index_name in filename_upper:
-                base_name_no_ext = os.path.splitext(filename_base)[0]
-                output_path = os.path.join(OUTPUT_FOLDER, f"{base_name_no_ext}.png")
                 process_raster(file_path, output_path, rules)
                 found_rule = True
-                break # 이미 맞는 규칙을 찾았으므로 더 이상 찾지 않음
+                break  # 맞는 규칙을 찾았으므로 더 이상 찾지 않음
 
-        # 이 부분은 이론상 실행되지 않아야 하지만, 안전장치로 남겨둡니다.
+        # 3. 'RGB'도 아니고, 유효한 식생 지수 이름도 없는 경우
         if not found_rule:
-            print(f"-> '{filename_base}' 파일 처리 중 예외 발생 (규칙 재탐색 실패). 건너<binary data, 2 bytes><binary data, 2 bytes><binary data, 2 bytes>니다.")
+            print(
+                f"-> '{filename_base}' 파일은 RGB도 아니고 유효한 식생 지수도 아니므로 건너<binary data, 2 bytes><binary data, 2 bytes><binary data, 2 bytes>니다.")
+        # --- 로직 끝 ---
 
     qgs.exitQgis()
     print("\n모든 작업이 완료되었습니다.")
-
 
 if __name__ == '__main__':
     main()
