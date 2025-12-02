@@ -11,10 +11,10 @@ import re
 # ==========================================
 # [설정] 경로를 수정해주세요
 # ==========================================
-GEOJSON_FOLDER = '../geo_data/김제'
-TIF_FOLDER = '../data/생육데이터/김제'
+GEOJSON_FOLDER = '../geo_data/화성'
+TIF_FOLDER = '../data/생육데이터/화성'
 OUTPUT_FOLDER = 'output'
-OUTPUT_FILE = os.path.join(OUTPUT_FOLDER, 'gj_final_matched.csv')
+OUTPUT_FILE = os.path.join(OUTPUT_FOLDER, 'hs_final_matched.csv')
 
 # [필터링] 분석할 식생지수 (대소문자 무시)
 TARGET_INDICES = ['NDVI', 'GNDVI', 'NDRE', 'OSAVI', 'LCI']
